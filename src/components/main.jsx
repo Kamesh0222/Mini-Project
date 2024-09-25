@@ -14,11 +14,12 @@ const Main = ({ toggleTheme }) => {
     logoutUser,
   } = useContext(UserContext);
   const [showModal, setShowModal] = useState(false);
-  const [selectedType, setSelectedType] = useState("text");
+  const [selectedType, setSelectedType] = useState("all"); 
   const [qrContent, setQrContent] = useState("");
   const [generatedQR, setGeneratedQR] = useState(null);
   const [loading, setLoading] = useState(false);
   const [viewedQR, setViewedQR] = useState(null);
+  const [sortOrder, setSortOrder] = useState("asc"); 
   const navigate = useNavigate();
 
   const handleGenerateQr = () => {
@@ -29,7 +30,7 @@ const Main = ({ toggleTheme }) => {
   const handleCloseModal = () => {
     setShowModal(false);
     setQrContent("");
-    setSelectedType("text");
+    setSelectedType("all");
     setGeneratedQR(null);
   };
 
@@ -122,8 +123,6 @@ const Main = ({ toggleTheme }) => {
 
   const handleTypeChange = (e) => {
     setSelectedType(e.target.value);
-    setQrContent("");
-    setGeneratedQR(null);
   };
 
   const handleLogout = () => {
@@ -131,10 +130,21 @@ const Main = ({ toggleTheme }) => {
     navigate("/");
   };
 
+  const sortByDate = (a, b) => {
+    if (sortOrder === "asc") return new Date(a.date) - new Date(b.date);
+    if (sortOrder === "desc") return new Date(b.date) - new Date(a.date);
+    return 0;
+  };
+
+  // Filter QR codes by the selected type and then sort by date
+  const filteredQrData = qrData
+    .filter((qr) => selectedType === "all" || qr.type === selectedType)
+    .sort(sortByDate);
+
   return (
     <div className="min-h-screen flex flex-col items-center bg-white dark:bg-gray-900 text-black dark:text-white">
       <div className="text-center py-8 w-full">
-        <Nav toggleTheme={toggleTheme} /> 
+        <Nav toggleTheme={toggleTheme} />
         <div className="flex justify-between mt-6 items-center max-w-5xl mx-auto w-full px-6">
           <h2 className="text-xl">Welcome, {username}</h2>
           <div>
@@ -156,6 +166,35 @@ const Main = ({ toggleTheme }) => {
         </div>
       </div>
 
+      <div className="w-full max-w-5xl mt-4 px-6 flex justify-between">
+        <div>
+          <label htmlFor="sortType" className="mr-2">Filter by Type:</label>
+          <select
+            id="sortType"
+            value={selectedType}
+            onChange={handleTypeChange}
+            className="text-gray-900 px-3 py-2 rounded-md"
+          >
+            <option value="all">All</option>
+            <option value="text">Text</option>
+            <option value="image">Image</option>
+            <option value="video">Video</option>
+          </select>
+        </div>
+        <div>
+          <label htmlFor="sortOrder" className="mr-2">Sort by Date:</label>
+          <select
+            id="sortOrder"
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value)}
+            className="text-gray-900 px-3 py-2 rounded-md"
+          >
+            <option value="asc">Ascending</option>
+            <option value="desc">Descending</option>
+          </select>
+        </div>
+      </div>
+
       <div className="w-full max-w-5xl mt-8">
         <div className="grid grid-cols-5 bg-gray-300 dark:bg-gray-700 font-bold text-center py-4 rounded-t-md">
           <div>S.No</div>
@@ -165,7 +204,7 @@ const Main = ({ toggleTheme }) => {
           <div>Delete</div>
         </div>
 
-        {qrData.map((item, index) => (
+        {filteredQrData.map((item, index) => (
           <div
             key={item.id}
             className="grid grid-cols-5 bg-gray-200 dark:bg-gray-800 border-b border-gray-700 py-4 text-center"
@@ -192,9 +231,9 @@ const Main = ({ toggleTheme }) => {
           </div>
         ))}
 
-        {qrData.length === 0 && (
+        {filteredQrData.length === 0 && (
           <div className="text-center mt-6 text-gray-600 dark:text-gray-400">
-            No QR codes generated yet.
+            No QR codes found for the selected type.
           </div>
         )}
       </div>
