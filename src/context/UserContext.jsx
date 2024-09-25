@@ -82,6 +82,12 @@ export const UserProvider = ({ children }) => {
     }
   };
 
+  // Logout user by clearing currentUser and removing from localStorage
+  const logoutUser = () => {
+    setCurrentUser(null);
+    localStorage.removeItem("currentUser");
+  };
+
   return (
     <UserContext.Provider
       value={{
@@ -94,6 +100,7 @@ export const UserProvider = ({ children }) => {
         updateQr,
         signupUser,
         loginUser,
+        logoutUser, // Export the logoutUser function
       }}
     >
       {children}
