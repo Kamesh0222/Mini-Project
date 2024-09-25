@@ -1,25 +1,23 @@
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
+import { UserContext } from "../context/UserContext"; 
+import axios from 'axios'; 
 
 const Main = () => {
-  const username = "Kamesh";
-  const [qrData, setQrData] = useState([
-    { id: 1, type: "Text", date: "2024-09-24", qr: "QR1" },
-    { id: 2, type: "Image", date: "2024-09-23", qr: "QR2" },
-    { id: 3, type: "Video", date: "2024-09-22", qr: "QR3" },
-  ]);
+  
+  const { currentUser: user, qrData, addQr, deleteQr } = useContext(UserContext);  
+
   const [showModal, setShowModal] = useState(false);
   const [selectedType, setSelectedType] = useState("text");
   const [qrContent, setQrContent] = useState("");
   const [generatedQR, setGeneratedQR] = useState(null);
-
-  const handleDelete = (id) => {
-    setQrData(qrData.filter((item) => item.id !== id));
-  };
+  const [loading, setLoading] = useState(false);
+  const [viewedQR, setViewedQR] = useState(null); 
 
   const handleGenerateQr = () => {
     setShowModal(true);
   };
+  const username = user?.name || "Guest";
 
   const handleCloseModal = () => {
     setShowModal(false);
@@ -29,38 +27,57 @@ const Main = () => {
   };
 
   const handleUploadToCloudinary = async (file) => {
+    setLoading(true);
     const formData = new FormData();
     formData.append("file", file);
-    formData.append(
-      "upload_preset",
-      import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET 
-    );
-  
+    formData.append("upload_preset", import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
+
     try {
-      const response = await fetch(
-        import.meta.env.VITE_CLOUDINARY_URL, 
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-      const data = await response.json();
-      console.log("Uploaded to Cloudinary:", data.secure_url);
-      setQrContent(data.secure_url); 
+      const response = await axios.post(import.meta.env.VITE_CLOUDINARY_URL, formData);
+      const fileURL = response.data.secure_url;
+      setQrContent(fileURL);
+      setLoading(false);
+      return fileURL;
     } catch (error) {
       console.error("Error uploading media:", error);
-    }
-  };
-  
-
-  const handleGenerateButtonClick = () => {
-    if (qrContent) {
-      setGeneratedQR(qrContent);
+      setLoading(false);
     }
   };
 
-  const handleDownloadQR = () => {
-    const svg = document.getElementById("qrCode");
+  const handleGenerateButtonClick = async () => {
+    if (selectedType !== "text" && !qrContent) {
+      const fileInput = document.getElementById("mediaFile").files[0];
+      const uploadedUrl = await handleUploadToCloudinary(fileInput);
+      if (uploadedUrl) {
+        generateAndStoreQR(uploadedUrl);
+      }
+    } else {
+      generateAndStoreQR(qrContent);
+    }
+  };
+
+  const generateAndStoreQR = (content) => {
+    const newQr = {
+      id: Date.now(),
+      type: selectedType,
+      date: new Date().toISOString().split("T")[0],
+      qr: content,
+    };
+    addQr(newQr);
+    setGeneratedQR(content);
+    setShowModal(false);
+  };
+
+  const handleDelete = (id) => {
+    deleteQr(id);
+  };
+
+  const handleViewQR = (qr) => {
+    setViewedQR(qr);
+  };
+
+  const handleDownloadQR = (qrId) => {
+    const svg = document.getElementById(`qrCode-${qrId}`);
     const svgData = new XMLSerializer().serializeToString(svg);
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
@@ -128,7 +145,7 @@ const Main = () => {
             <div>{item.type}</div>
             <div>{item.date}</div>
             <div>
-              <button className="text-blue-500 hover:underline">View QR</button>
+              <button onClick={() => handleViewQR(item.qr)} className="text-blue-500 hover:underline">View QR</button>
             </div>
             <div>
               <button
@@ -147,6 +164,29 @@ const Main = () => {
           </div>
         )}
       </div>
+
+      {viewedQR && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center">
+          <div className="bg-gray-800 text-white p-8 rounded-lg shadow-lg relative">
+            <h2 className="text-2xl mb-4">View QR Code</h2>
+            <QRCodeSVG id={`qrCode-${viewedQR}`} value={viewedQR} size={256} />
+            <div className="mt-4 flex justify-between">
+              <button
+                onClick={() => handleDownloadQR(viewedQR)}
+                className="px-4 py-2 bg-green-600 rounded-md hover:bg-green-700"
+              >
+                Download QR
+              </button>
+              <button
+                onClick={() => setViewedQR(null)}
+                className="px-4 py-2 bg-red-600 rounded-md hover:bg-red-700"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center">
@@ -176,18 +216,14 @@ const Main = () => {
               />
             ) : (
               <input
+                id="mediaFile"
                 type="file"
                 accept={selectedType === "image" ? "image/*" : "video/*"}
                 className="mb-4"
-                onChange={(e) => handleUploadToCloudinary(e.target.files[0])}
               />
             )}
 
-            {generatedQR && (
-              <div className="text-center mb-4">
-                <QRCodeSVG id="qrCode" value={generatedQR} size={256} />
-              </div>
-            )}
+            {loading && <p className="text-center text-yellow-500">Uploading media...</p>}
 
             <div className="flex justify-between">
               <button
@@ -196,15 +232,6 @@ const Main = () => {
               >
                 Generate QR
               </button>
-
-              {generatedQR && (
-                <button
-                  onClick={handleDownloadQR}
-                  className="px-4 py-2 bg-green-600 rounded-md hover:bg-green-700"
-                >
-                  Download QR
-                </button>
-              )}
 
               <button
                 onClick={handleCloseModal}
