@@ -1,18 +1,18 @@
 import React, { useContext, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { UserContext } from "../context/UserContext"; 
-import axios from 'axios'; 
+import { UserContext } from "../context/UserContext";
+import { useNavigate } from "react-router-dom";
+import axios from 'axios';
 
 const Main = () => {
-  
-  const { currentUser: user, qrData, addQr, deleteQr } = useContext(UserContext);  
-
+  const { currentUser: user, qrData, addQr, deleteQr, logoutUser } = useContext(UserContext);  // Add logoutUser to the context
   const [showModal, setShowModal] = useState(false);
   const [selectedType, setSelectedType] = useState("text");
   const [qrContent, setQrContent] = useState("");
   const [generatedQR, setGeneratedQR] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [viewedQR, setViewedQR] = useState(null); 
+  const [viewedQR, setViewedQR] = useState(null);
+  const navigate = useNavigate();
 
   const handleGenerateQr = () => {
     setShowModal(true);
@@ -113,20 +113,37 @@ const Main = () => {
     setGeneratedQR(null);
   };
 
+  const handleLogout = () => {
+    logoutUser(); 
+    navigate("/")
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center bg-gray-900 text-white">
       <div className="text-center py-8 w-full">
         <h1 className="text-5xl font-bold">QR GENERATOR</h1>
         <div className="flex justify-between mt-6 items-center max-w-5xl mx-auto w-full px-6">
           <h2 className="text-xl">Welcome, {username}</h2>
-          <button
-            className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-            onClick={handleGenerateQr}
-          >
-            Generate QR
-          </button>
+          <div>
+            <button
+              className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              onClick={handleGenerateQr}
+            >
+              Generate QR
+            </button>
+            {user && (
+              <button
+                className="ml-4 px-6 py-3 bg-red-600 text-white rounded-md hover:bg-red-700"
+                onClick={handleLogout} // Add logout button
+              >
+                Logout
+              </button>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* The rest of your component for displaying QR codes */}
       <div className="w-full max-w-5xl mt-8">
         <div className="grid grid-cols-5 bg-gray-700 font-bold text-center py-4 rounded-t-md">
           <div>S.No</div>
