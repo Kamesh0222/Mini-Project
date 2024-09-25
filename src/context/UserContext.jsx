@@ -58,7 +58,6 @@ export const UserProvider = ({ children }) => {
   };
 
   const signupUser = (newUser) => {
-    // Check if username already exists
     const userExists = users.some((user) => user.userName === newUser.userName);
     if (!userExists) {
       setUsers([...users, newUser]);
@@ -82,7 +81,6 @@ export const UserProvider = ({ children }) => {
     }
   };
 
-  // Logout user by clearing currentUser and removing from localStorage
   const logoutUser = () => {
     setCurrentUser(null);
     localStorage.removeItem("currentUser");
@@ -100,7 +98,7 @@ export const UserProvider = ({ children }) => {
         updateQr,
         signupUser,
         loginUser,
-        logoutUser, // Export the logoutUser function
+        logoutUser, 
       }}
     >
       {children}
