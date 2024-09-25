@@ -1,53 +1,58 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
+import { useNavigate } from "react-router-dom";
+import { UserContext } from "../context/UserContext";
 
 const Login = () => {
-  const [logindata, setLogindata] = useState({
+  const { loginUser } = useContext(UserContext);
+  const navigate = useNavigate();
+  
+  const [loginData, setLoginData] = useState({
     userName: "",
     password: ""
   });
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setLogindata({
-      ...logindata,
+    setLoginData({
+      ...loginData,
       [name]: value,
     });
   };
 
   const handleLogin = (e) => {
     e.preventDefault();
-    // Add login logic here
-    console.log(logindata);
+    const success = loginUser(loginData);
+    if (success) {
+      console.log("Login successful");
+      navigate("/main");
+    } else {
+      console.log("Invalid login");
+      alert("Invalid username or password");
+    }
   };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white">
       <div className="w-full max-w-md bg-gray-800 p-8 rounded-lg shadow-md">
-        <h2 className="text-2xl font-bold mb-6 text-center">
-          Login
-        </h2>
+        <h2 className="text-2xl font-bold mb-6 text-center">Login</h2>
         <form onSubmit={handleLogin} className="space-y-6">
           <div className="flex flex-col">
-            <label htmlFor="userName" className="mb-2 text-sm font-medium">
-              Username
-            </label>
+            <label htmlFor="userName" className="mb-2 text-sm font-medium">Username</label>
             <input
               type="text"
               name="userName"
-              value={logindata.userName}
+              value={loginData.userName}
               onChange={handleInputChange}
               className="px-4 py-2 border border-gray-600 rounded-md bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Enter your username"
             />
           </div>
           <div className="flex flex-col">
-            <label htmlFor="password" className="mb-2 text-sm font-medium">
-              Password
-            </label>
+            <label htmlFor="password" className="mb-2 text-sm font-medium">Password</label>
             <input
               type="password"
               name="password"
-              value={logindata.password}
+              value={loginData.password}
               onChange={handleInputChange}
               className="px-4 py-2 border border-gray-600 rounded-md bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Enter your password"
