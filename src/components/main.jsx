@@ -15,10 +15,11 @@ const Main = ({ toggleTheme }) => {
   } = useContext(UserContext);
   const [showModal, setShowModal] = useState(false);
   const [selectedType, setSelectedType] = useState("all");
+  const [selected, setSelected] = useState("text");
   const [qrContent, setQrContent] = useState("");
   const [generatedQR, setGeneratedQR] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [viewedQRDetails, setViewedQRDetails] = useState(null);
+  const [viewedQR, setViewedQR] = useState(null);
   const [sortOrder, setSortOrder] = useState("asc");
   const [viewMode, setViewMode] = useState("table");
   const navigate = useNavigate();
@@ -26,6 +27,7 @@ const Main = ({ toggleTheme }) => {
   const handleGenerateQr = () => {
     setShowModal(true);
   };
+
   const username = user?.name || "Guest";
 
   const handleCloseModal = () => {
@@ -33,6 +35,7 @@ const Main = ({ toggleTheme }) => {
     setQrContent("");
     setSelectedType("all");
     setGeneratedQR(null);
+    setViewedQR(null);
   };
 
   const handleUploadToCloudinary = async (file) => {
@@ -87,12 +90,47 @@ const Main = ({ toggleTheme }) => {
     deleteQr(id);
   };
 
-  const handleViewQRDetails = (qr) => {
-    setViewedQRDetails(qr);
+  const handleViewQR = (qr) => {
+    setViewedQR(qr); 
+  };
+
+  const handleDownloadQR = (qrId) => {
+    const svg = document.getElementById(`qrCode-${qrId}`);
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const img = new Image();
+    const svgBlob = new Blob([svgData], {
+      type: "image/svg+xml;charset=utf-8",
+    });
+    const url = URL.createObjectURL(svgBlob);
+
+    img.onload = function () {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+
+      const imgURI = canvas
+        .toDataURL("image/png")
+        .replace("image/png", "image/octet-stream");
+
+      const downloadLink = document.createElement("a");
+      downloadLink.href = imgURI;
+      downloadLink.download = "qr_code.png";
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+    };
+    img.src = url;
   };
 
   const handleTypeChange = (e) => {
     setSelectedType(e.target.value);
+  };
+
+  const handleChange = (e) => {
+    setSelected(e.target.value);
   };
 
   const handleLogout = () => {
@@ -106,13 +144,13 @@ const Main = ({ toggleTheme }) => {
     return 0;
   };
 
-  const filteredQrData = qrData
-    .filter((qr) => selectedType === "all" || qr.type === selectedType)
-    .sort(sortByDate);
-
   const toggleViewMode = (mode) => {
     setViewMode(mode);
   };
+
+  const filteredQrData = qrData
+    .filter((qr) => selectedType === "all" || qr.type === selectedType)
+    .sort(sortByDate);
 
   return (
     <div className="min-h-screen flex flex-col items-center bg-white dark:bg-gray-900 text-black dark:text-white">
@@ -141,9 +179,7 @@ const Main = ({ toggleTheme }) => {
 
       <div className="w-full max-w-5xl mt-4 px-6 flex justify-between">
         <div>
-          <label htmlFor="sortType" className="mr-2">
-            Filter by Type:
-          </label>
+          <label htmlFor="sortType" className="mr-2">Filter by Type:</label>
           <select
             id="sortType"
             value={selectedType}
@@ -157,9 +193,7 @@ const Main = ({ toggleTheme }) => {
           </select>
         </div>
         <div>
-          <label htmlFor="sortOrder" className="mr-2">
-            Sort by Date:
-          </label>
+          <label htmlFor="sortOrder" className="mr-2">Sort by Date:</label>
           <select
             id="sortOrder"
             value={sortOrder}
@@ -211,10 +245,10 @@ const Main = ({ toggleTheme }) => {
               <div>{item.date}</div>
               <div>
                 <button
-                  onClick={() => handleViewQRDetails(item)}
+                  onClick={() => handleViewQR(item)}
                   className="text-blue-500 hover:underline"
                 >
-                  View QR
+                  View
                 </button>
               </div>
               <div>
@@ -236,7 +270,7 @@ const Main = ({ toggleTheme }) => {
         </div>
       ) : (
         <div className="w-full max-w-5xl mt-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {filteredQrData.map((item, index) => (
+          {filteredQrData.map((item) => (
             <div
               key={item.id}
               className="bg-gray-200 dark:bg-gray-800 p-4 rounded-lg shadow-md"
@@ -246,7 +280,7 @@ const Main = ({ toggleTheme }) => {
                   id={`qrCode-${item.id}`}
                   value={item.qr}
                   size={150}
-                  onClick={() => handleViewQRDetails(item)}
+                  onClick={() => handleViewQR(item)}
                   className="cursor-pointer"
                 />
               </div>
@@ -275,33 +309,34 @@ const Main = ({ toggleTheme }) => {
         </div>
       )}
 
-      {viewedQRDetails && (
+      {viewedQR && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center">
           <div className="bg-gray-800 text-white p-8 rounded-lg shadow-lg relative">
-            <h2 className="text-2xl mb-4">QR Code Details</h2>
-            <div className="mt-4">
-              {viewedQRDetails.type === "text" && (
-                <p className="text-center">
-                  Text Content: {viewedQRDetails.qr}
-                </p>
-              )}
-              {viewedQRDetails.type === "image" && (
-                <img
-                  src={viewedQRDetails.qr}
-                  alt="QR Code Content"
-                  className="mx-auto"
-                />
-              )}
-              {viewedQRDetails.type === "video" && (
-                <video controls className="mx-auto">
-                  <source src={viewedQRDetails.qr} type="video/mp4" />
-                  Your browser does not support the video tag.
-                </video>
-              )}
-            </div>
+            <h2 className="text-2xl mb-4">{viewMode === 'grid' ? 'QR Code Content' : 'QR Code'}</h2>
+            
+            {viewMode === 'table' ? (
+              <QRCodeSVG id={`qrCode-${viewedQR.id}`} value={viewedQR.qr} size={256} />
+            ) : (
+              <div className="mt-4">
+                <p><strong>Type:</strong> {viewedQR.type}</p>
+                <p><strong>Date:</strong> {viewedQR.date}</p>
+                {viewedQR.type === "text" && <p><strong>Text Content:</strong> {viewedQR.qr}</p>}
+                {viewedQR.type === "image" && <img src={viewedQR.qr} alt="QR Code Content" className="mx-auto" />}
+                {viewedQR.type === "video" && <video controls className="mx-auto"><source src={viewedQR.qr} type="video/mp4" />Your browser does not support the video tag.</video>}
+              </div>
+            )}
+
             <div className="mt-4 flex justify-between">
+              {viewMode === 'table' && (
+                <button
+                  onClick={() => handleDownloadQR(viewedQR.id)}
+                  className="px-4 py-2 bg-green-600 rounded-md hover:bg-green-700"
+                >
+                  Download QR
+                </button>
+              )}
               <button
-                onClick={() => setViewedQRDetails(null)}
+                onClick={handleCloseModal}
                 className="px-4 py-2 bg-red-600 rounded-md hover:bg-red-700"
               >
                 Close
@@ -315,19 +350,21 @@ const Main = ({ toggleTheme }) => {
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center">
           <div className="bg-gray-800 text-white p-8 rounded-lg shadow-lg relative">
             <h2 className="text-2xl mb-4">Generate QR Code</h2>
+
             <div className="mb-4">
               <label className="block mb-2">Choose QR type:</label>
               <select
                 className="text-gray-900 px-3 py-2 rounded-md w-full"
-                value={selectedType}
-                onChange={handleTypeChange}
+                value={selected}
+                onChange={handleChange}
               >
                 <option value="text">Text</option>
                 <option value="image">Image</option>
                 <option value="video">Video</option>
               </select>
             </div>
-            {selectedType === "text" ? (
+
+            {selected === "text" ? (
               <input
                 type="text"
                 placeholder="Enter text for QR"
@@ -339,13 +376,15 @@ const Main = ({ toggleTheme }) => {
               <input
                 id="mediaFile"
                 type="file"
-                accept={selectedType === "image" ? "image/*" : "video/*"}
+                accept={selected === "image" ? "image/*" : "video/*"}
                 className="mb-4"
               />
             )}
+
             {loading && (
               <p className="text-center text-yellow-500">Uploading media...</p>
             )}
+
             <div className="flex justify-between">
               <button
                 onClick={handleGenerateButtonClick}
@@ -353,6 +392,7 @@ const Main = ({ toggleTheme }) => {
               >
                 Generate QR
               </button>
+
               <button
                 onClick={handleCloseModal}
                 className="px-4 py-2 bg-red-600 rounded-md hover:bg-red-700"
